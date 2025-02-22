@@ -49,34 +49,43 @@ class KEX():
         # testa kolla pymol
         pass
 
+
+      
+
     
-    def mutations(self, chain = 'All', pos = None, mutation = None): # Eugen
-        if pos == None or mutation == None:
+    def mutations(self, subunits = 'All', positions = None, mutations = None): # Eugen
+        
+        def apply_mutation():
+            pm.cmd.get_wizard().set_mode(mutation)
+            pm.cmd.get_wizard().do_select(f"/MutProt//{chain}/{pos}/")
+            pm.cmd.get_wizard().apply()              
+        
+        if positions == None or mutations == None:
             return "You have to enter information"
         
-        if chain != 'All' and type(chain) != list:
+        if subunits != 'All' and type(subunits) != list:
             return "Enter the chains in a list"
 
-        mutation = mutation.upper()
-        
-        
-        
+                
         with pymol2.PyMOL() as pm:
-            pm.cmd.load(self.starting_enzyme, self.starting_enzyme)
+            pm.cmd.load(self.starting_enzyme, "MutProt")
             pm.cmd.wizard("mutagenesis")
             pm.cmd.refresh_wizard()
         
-            if chain == 'All':
-                chains = pm.cmd.get_chains(self.starting_enzyme)
+            if subunits == 'All':
+                chains = pm.cmd.get_chains("MutProt")
             else:
-                chains = chain
-            
+                chains = subunits
+                
             for chain in chains:
-                model = pm.cmd.get_model(f"/{self.starting_enzyme}//{chain}/{pos}")
-                starting_aa = model.atom[0].resn
-                pm.cmd.get_wizard().set_mode(mutation)
-                pm.cmd.get_wizard().do_select(f"/{self.starting_enzyme}//{chain}/{pos}/")
-                pm.cmd.get_wizard().apply()
+                for i, pos in enumerate(positions):
+                    mutation = mutations[i]
+                    
+                    model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
+                    starting_aa = model.atom[0].resn
+
+                    apply_mutation()
+                
 
             pm.cmd.set_wizard()
 
@@ -86,18 +95,12 @@ class KEX():
 
             # spara mutationen i pdb mappen
             output_path = os.path.join(self.pdb_dir, new_filename)
-            pm.cmd.save(output_path, self.starting_enzyme)
+            pm.cmd.save(output_path, "MutProt")
             
                         
-            
+             
             
                 
-
-                
-            
-
-            
-        
 
     
     def create_pdbqt(self): # Eugen
