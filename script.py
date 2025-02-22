@@ -1,4 +1,9 @@
 # imorts
+import pymol2
+import nglview as nv
+import MDAnalysis as mda
+import os
+import subprocess
 
 
 class KEX():
