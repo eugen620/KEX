@@ -63,6 +63,10 @@ class KEX():
         if positions == None or mutations == None:
             return "You have to enter information"
         
+        if type(positions) == int:
+            positions = [positions]
+        
+        
         if subunits != 'All' and type(subunits) != list:
             return "Enter the chains in a list"
 
@@ -77,20 +81,30 @@ class KEX():
             else:
                 chains = subunits
                 
-            for chain in chains:
-                for i, pos in enumerate(positions):
-                    mutation = mutations[i]
-                    
+            
+            new_filename = []
+            
+            for i, pos in enumerate(positions):
+                
+                mutation = mutations[i]
+                
+                for chain in chains:
+                    print(f"Chain is: {chain}")
+                    print(f"position is: {pos}")
                     model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
                     starting_aa = model.atom[0].resn
 
                     apply_mutation()
                 
-
+                mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
+                new_filename.append(mutation_str)
+            
+        
             pm.cmd.set_wizard()
 
             # spara mutationen i klassen
-            new_filename = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}.pdb"
+            new_filename = f"{'_'.join(new_filename)}.pdb"
+            print(new_filename)
             self.pdb_filenames.append(new_filename)
 
             # spara mutationen i pdb mappen
