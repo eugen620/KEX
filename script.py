@@ -127,6 +127,10 @@ class KEX():
                             starting_aa = model.atom[0].resn
                             apply_mutation()
                     
+                        
+                        if starting_aa == mutation:
+                            print(f"Här är det en odödig mutation, {starting_aa} till {mutation}")    
+                            continue
                         pm.cmd.set_wizard()
                     
                         mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
