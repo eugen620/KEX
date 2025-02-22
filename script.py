@@ -5,7 +5,7 @@ import MDAnalysis as mda
 import os
 import subprocess
 
-from dict_module import aa_dict
+from dict_module import aa_dict, aa_list
 
 class KEX():
 
@@ -66,12 +66,12 @@ class KEX():
         if type(positions) == int:
             positions = [positions]
         
-        
         if subunits != 'All' and type(subunits) != list:
             return "Enter the chains in a list"
 
                 
         with pymol2.PyMOL() as pm:
+            
             pm.cmd.load(self.starting_enzyme, "MutProt")
             pm.cmd.wizard("mutagenesis")
             pm.cmd.refresh_wizard()
@@ -79,42 +79,59 @@ class KEX():
             if subunits == 'All':
                 chains = pm.cmd.get_chains("MutProt")
             else:
-                chains = subunits
-                
-            
-            new_filename = []
-            
-            for i, pos in enumerate(positions):
-                
-                mutation = mutations[i]
-                
-                for chain in chains:
-                    print(f"Chain is: {chain}")
-                    print(f"position is: {pos}")
-                    model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
-                    starting_aa = model.atom[0].resn
+                chains = subunits 
 
-                    apply_mutation()
-                
-                mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
-                new_filename.append(mutation_str)
+            if mutations == "All":
+                mutations = aa_list
             
-        
-            pm.cmd.set_wizard()
+            new_filename = [] 
 
-            # spara mutationen i klassen
-            new_filename = f"{'_'.join(new_filename)}.pdb"
-            print(new_filename)
-            self.pdb_filenames.append(new_filename)
+            if len(positions) == len(mutations):
+                for i, pos in enumerate(positions):                                        
+                    mutation = mutations[i]
+                    for chain in chains:
+                        model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
+                        starting_aa = model.atom[0].resn
+                        apply_mutation()
+                    mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
+                    new_filename.append(mutation_str)
+                
+                # spara mutationen i klassen
+                new_filename = f"{'_'.join(new_filename)}.pdb"
+                self.pdb_filenames.append(new_filename)
 
-            # spara mutationen i pdb mappen
-            output_path = os.path.join(self.pdb_dir, new_filename)
-            pm.cmd.save(output_path, "MutProt")
+                # spara mutationen i pdb mappen
+                output_path = os.path.join(self.pdb_dir, new_filename)
+                pm.cmd.save(output_path, "MutProt")
+
+            else:
+                for pos in positions:
+                    for mutation in mutations:
+                        new_filename = []
+
+                        pm.cmd.delete("MutProt")
+                        pm.cmd.load(self.starting_enzyme, "MutProt")
+                        pm.cmd.wizard("mutagenesis")
+                        pm.cmd.refresh_wizard()
+                    
+                        for chain in chains:
+                            model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
+                            starting_aa = model.atom[0].resn
+                            apply_mutation()
+                    
+                        pm.cmd.set_wizard()
+                    
+                        mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
+                        new_filename.append(mutation_str)               
+                    
+                        new_filename = f"{'_'.join(new_filename)}.pdb"
+                        self.pdb_filenames.append(new_filename)
+
+                        output_path = os.path.join(self.pdb_dir, new_filename)
+                        pm.cmd.save(output_path, "MutProt")
             
                         
              
-            
-                
 
     
     def create_pdbqt(self): # Eugen
