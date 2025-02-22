@@ -27,6 +27,14 @@ class KEX():
         os.makedirs(self.pdb_dir, exist_ok = True) 
 
 
+    def clean_up_pdb_dir(self):
+        for filename in os.listdir(self.pdb_dir):           
+            file_path = os.path.join(self.pdb_dir, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        
+    
+    
     def viz(self): # Saga
         pass
 
