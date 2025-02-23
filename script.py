@@ -35,7 +35,11 @@ class KEX():
             file_path = os.path.join(self.pdb_dir, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-        # Lägg till så den adderar clean versionen till mappen efter allt rensats
+        
+        # Förbättra den här delen sen
+        self.pdb_filenames = []
+        self.pdb_filenames = self.pdb_filenames.append(filename)
+        
     
     
     def viz(self): # Saga
@@ -152,7 +156,7 @@ class KEX():
 
     
     def create_pdbqt(self): # Eugen
-        # file handeling
+        
         pass
 
     
