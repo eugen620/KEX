@@ -186,8 +186,18 @@ class KEX():
         for filename in self.pdb_filenames:
             filename = filename[:-4]
             subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level CRITICAL")
+            u = mda.Universe(f"{self.pdbqt_dir}/{filename}.pqr")
+            u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
+
+            # Removes the first two lines, makes the file work in Vina
+            with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
+                for i, line in enumerate(rf):
+                    if i >= 2:
+                        wf.write(line)
        
-    
+            os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
+            os.remove(f"{self.pdbqt_dir}/{filename}.log")
+            os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
     
     def windows_docking(self): # Eugen
         pass
