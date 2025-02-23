@@ -34,6 +34,9 @@ class KEX():
         self.pdbqt_dir = os.path.join(os.getcwd(), "pdbqt")
         os.makedirs(self.pdbqt_dir, exist_ok = True)
 
+        self.docking_results_dir = os.path.join(os.getcwd(), "docking_results")
+        os.makedirs(self.docking_results_dir, exist_ok = True)
+
         
 
 
@@ -45,7 +48,7 @@ class KEX():
     
     
     def clean_up_dir(self, directory): # kanske run den här i __init__
-        
+        # utveckla för docking results också
         if directory == "pdb":
             directory = self.pdb_dir
             self.pdb_filenames = []
@@ -225,9 +228,8 @@ class KEX():
         
         for ligand in self.ligand_filenames:
             for enzyme in self.pdbqt_filenames:
-                print(enzyme)
                 config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
-                config.write(f"receptor={self.pdbqt_dir}/{enzyme}\n")
+                config.write(f"receptor={self.pdb_dir}/{enzyme}\n")
                 config.write(f"ligand={ligand}\n")
                 config.write('center_x=')
                 config.write(str(cx))
@@ -248,8 +250,14 @@ class KEX():
                 config.write(str(bz))
                 config.write('\n')
                 config.close()
-                res = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
-                print(res.stdout)
+                res = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out {self.docking_results_dir}/docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
+                
+                #Lös detta bättre
+                os.remove("config.txt")
+                os.remove("log.txt")
+                
+                # spara resultaten från docked filen
+                # display resultaten
     
     def os_docking(self): # Ebba
         pass
