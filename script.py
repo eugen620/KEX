@@ -17,44 +17,49 @@ class KEX():
         self.pdb_filenames = []
         self.pdbqt_filenames = []
 
-        
         # kör clean up och här appenda den till self.pdb_filenames
 
-        
-        # *** Tillfällig kod ****
-        self.pdb_filenames.append(filename) # vi vill egentligen inte lägga in den råa filen här, vi ska fixa en clean up method och sedan appen den clean versionen i append metoden.
+        self.pdb_filenames.append(filename) # *** Tillfällig kod *** vi vill egentligen inte lägga in den råa filen här, vi ska fixa en clean up method och sedan append.
         self.starting_enzyme = self.pdb_filenames[0]
         
-
+        self.create_directories()
+        self.copy_starting_enzyme_into_pdb_dir() # Skriv om den här sen så att den tar clean versionen av enzymet som skapas i klassen
         
-        # Sjapar pdb och pdbqt mappar och attribut med filepath så man kan använda de i koden sen
-        # Kanske ha denna del i mutations metoden, nu skapar den mappen oavsätt
+
+    def create_directories(self):
         self.pdb_dir = os.path.join(os.getcwd(), "pdb")
         os.makedirs(self.pdb_dir, exist_ok = True) 
-
+        
         self.pdbqt_dir = os.path.join(os.getcwd(), "pdbqt")
         os.makedirs(self.pdbqt_dir, exist_ok = True)
 
-        # Den här delen tar just nu clean versionen från samma directory som notebooken är i och flyttar in den i pdb mappen.
-        # Vi kan skriva om senare så att clean up metoden direkt sätter in clean cersionen i den mappen.
+        
+
+
+    def copy_starting_enzyme_into_pdb_dir(self):        
         source = os.path.join(os.getcwd(), self.starting_enzyme)
         destination = os.path.join(self.pdb_dir, self.starting_enzyme)
         shutil.copy2(source, destination)
     
     
     
-    def clean_up_pdb_dir(self):
-        for filename in os.listdir(self.pdb_dir):           
-            file_path = os.path.join(self.pdb_dir, filename)
+    def clean_up_dir(self, directory):
+        
+        if directory == "pdb":
+            directory = self.pdb_dir
+            self.pdb_filenames = []
+            self.pdb_filenames.append(self.raw_filename)
+            
+            
+        elif directory == "pdbqt":
+            directory = self.pdbqt_dir
+            self.pdbqt_filenames = []
+        
+        for filename in os.listdir(directory):           
+            file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-        
-        # Förbättra den här delen sen
-        self.pdb_filenames = []
-        self.pdb_filenames.append(self.raw_filename)
-        
-    
-    
+        self.copy_starting_enzyme_into_pdb_dir()
     
     def viz(self): # Saga
         pass
@@ -198,6 +203,7 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
             os.remove(f"{self.pdbqt_dir}/{filename}.log")
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
+            self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     def windows_docking(self): # Eugen
         pass
