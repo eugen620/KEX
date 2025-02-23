@@ -6,9 +6,10 @@ import os
 import sys
 import shutil
 import subprocess
+import pandas as pd
 from dict_module import aa_dict, aa_list
 
-
+# Kanske vi borde skapa en metod för att göra smiles till .mol format
 
 class KEX():
 
@@ -48,12 +49,14 @@ class KEX():
     
     
     def clean_up_dir(self, directory): # kanske run den här i __init__
-        # utveckla för docking results också
+        
         if directory == "pdb":
             directory = self.pdb_dir
             self.pdb_filenames = []
             self.pdb_filenames.append(self.raw_filename)
-            
+        
+        elif directory == "docking_results":
+            directory = self.docking_results_dir    
             
         elif directory == "pdbqt":
             directory = self.pdbqt_dir
@@ -210,26 +213,29 @@ class KEX():
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     
-    def mol_to_pdbqt(self, filename):
+    def mol_to_pdbqt(self, filename): # kanske göra så de sparas i en annan mapp
         filename = filename[:-4]
         subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
         self.ligand_filenames.append(f"{filename}.pdbqt")
     
 
     
-    def windows_docking(self, center, boxsize = 20): # Eugen
+    def windows_docking(self, center, boxsize = 20): # Snygga till strukturen
         cx = center[0] # byta ut mot class attr när metoden find_molecule_coordinates är gjord
         cy = center[1]
         cz = center[2]
         bx = boxsize
         by = boxsize
         bz = boxsize
-
+        
+        d = {}
         
         for ligand in self.ligand_filenames:
+            results = []
+            enzymes = []
             for enzyme in self.pdbqt_filenames:
                 config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
-                config.write(f"receptor={self.pdb_dir}/{enzyme}\n")
+                config.write(f"receptor={self.pdbqt_dir}/{enzyme}\n")
                 config.write(f"ligand={ligand}\n")
                 config.write('center_x=')
                 config.write(str(cx))
@@ -250,14 +256,26 @@ class KEX():
                 config.write(str(bz))
                 config.write('\n')
                 config.close()
-                res = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out {self.docking_results_dir}/docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
+                new_filename = f"docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt"
+                r = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out {self.docking_results_dir}/{new_filename} --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
                 
-                #Lös detta bättre
+                #Lös detta bättre?
                 os.remove("config.txt")
                 os.remove("log.txt")
                 
                 # spara resultaten från docked filen
-                # display resultaten
+                
+                enzymes.append(enzyme[:-6])
+
+                with open(f"{self.docking_results_dir}/{new_filename}") as rf:
+                    next(rf)
+                    res = float(rf.readline().split()[3])
+                
+                results.append(res)
+            
+            d[f"{ligand[:-6]} (kcal/mol)"] = pd.Series(results, index = enzymes)
+            df = pd.DataFrame(d)
+        return df
     
     def os_docking(self): # Ebba
         pass
