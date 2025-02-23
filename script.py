@@ -4,6 +4,7 @@ import nglview as nv
 import MDAnalysis as mda
 import os
 import sys
+import shutil
 import subprocess
 from dict_module import aa_dict, aa_list
 
@@ -16,31 +17,54 @@ class KEX():
         self.pdb_filenames = []
         self.pdbqt_filenames = []
 
-        
-        # kör clean up och appenda den till self.pdb_filenames
+        # kör clean up och här appenda den till self.pdb_filenames
 
-        
-        # *** Tillfällig kod ****
-        self.pdb_filenames.append(filename)
+        self.pdb_filenames.append(filename) # *** Tillfällig kod *** vi vill egentligen inte lägga in den råa filen här, vi ska fixa en clean up method och sedan append.
         self.starting_enzyme = self.pdb_filenames[0]
         
+        self.create_directories()
+        self.copy_starting_enzyme_into_pdb_dir() # Skriv om den här sen så att den tar clean versionen av enzymet som skapas i klassen
+        
 
+    def create_directories(self):
         self.pdb_dir = os.path.join(os.getcwd(), "pdb")
         os.makedirs(self.pdb_dir, exist_ok = True) 
+        
+        self.pdbqt_dir = os.path.join(os.getcwd(), "pdbqt")
+        os.makedirs(self.pdbqt_dir, exist_ok = True)
+
+        
 
 
+    def copy_starting_enzyme_into_pdb_dir(self):        
+        source = os.path.join(os.getcwd(), self.starting_enzyme)
+        destination = os.path.join(self.pdb_dir, self.starting_enzyme)
+        shutil.copy2(source, destination)
     
-    def clean_up_pdb_dir(self):
-        for filename in os.listdir(self.pdb_dir):           
-            file_path = os.path.join(self.pdb_dir, filename)
+    
+    
+    def clean_up_dir(self, directory):
+        
+        if directory == "pdb":
+            directory = self.pdb_dir
+            self.pdb_filenames = []
+            self.pdb_filenames.append(self.raw_filename)
+            
+            
+        elif directory == "pdbqt":
+            directory = self.pdbqt_dir
+            self.pdbqt_filenames = []
+        
+        for filename in os.listdir(directory):           
+            file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-        # Lägg till så den adderar clean versionen till mappen efter allt rensats
-    
+        self.copy_starting_enzyme_into_pdb_dir()
     
     def viz(self): # Saga
         pass
 
+    
     
     def find_molecule_coordinates(self): # Ebba
         # tar molekylens namn och chain som input
@@ -49,12 +73,14 @@ class KEX():
         pass
 
     
+    
     def clean_up(self): # Ebba
         # använd self.raw_filename
         # använd rensa alla molekyler (kan göras som i notebooken eller med ex mdanalysis)
         # returnera clean filen, kör funktionen i __init__
         pass
 
+    
     
     def add_functional_group(self): # Saga
         # testa kolla pymol
@@ -83,7 +109,10 @@ class KEX():
         if subunits != 'All' and type(subunits) != list:
             return "Some error message"
 
-        sys.stdout = open(os.devnull, 'w') #Tar bort alla print outputs, man kan skriva om den så att printsen sparas i en mutations_log.txt fil        
+        
+        original_stdout = sys.stdout
+        log_file = open("mutations_log.txt", "w")
+        sys.stdout = log_file
         
         with pymol2.PyMOL() as pm:
             pm.cmd.load(self.starting_enzyme, "MutProt")
@@ -147,14 +176,34 @@ class KEX():
                         output_path = os.path.join(self.pdb_dir, new_filename)
                         pm.cmd.save(output_path, "MutProt")
             
-        sys.stdout = sys.__stdout__     # Återställer prints            
+        
+
+
+        sys.stdout = original_stdout  
+        log_file.close()
+        
+           
              
 
     
     def create_pdbqt(self): # Eugen
-        # file handeling
-        pass
+        
+        for filename in self.pdb_filenames:
+            filename = filename[:-4]
+            subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level CRITICAL")
+            u = mda.Universe(f"{self.pdbqt_dir}/{filename}.pqr")
+            u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
 
+            # Removes the first two lines, makes the file work in Vina
+            with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
+                for i, line in enumerate(rf):
+                    if i >= 2:
+                        wf.write(line)
+       
+            os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
+            os.remove(f"{self.pdbqt_dir}/{filename}.log")
+            os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
+            self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     def windows_docking(self): # Eugen
         pass
