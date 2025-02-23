@@ -70,7 +70,7 @@ class KEX():
     def find_molecule_coordinates(self): # Ebba
         # tar molekylens namn och chain som input
         # använd self.raw_filename
-        # returnera koordinaterna för center
+        # returnera koordinaterna för center, alternativt spara i attibut self.docking_center, kan användas senare då
         pass
 
     
@@ -212,10 +212,44 @@ class KEX():
         subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
         self.ligand_filenames.append(f"{filename}.pdbqt")
     
-    
-    def windows_docking(self): # Eugen
-        pass
 
+    
+    def windows_docking(self, center, boxsize = 20): # Eugen
+        cx = center[0] # byta ut mot class attr när metoden find_molecule_coordinates är gjord
+        cy = center[1]
+        cz = center[2]
+        bx = boxsize
+        by = boxsize
+        bz = boxsize
+
+        
+        for ligand in self.ligand_filenames:
+            for enzyme in self.pdbqt_filenames:
+                print(enzyme)
+                config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
+                config.write(f"receptor={self.pdbqt_dir}/{enzyme}\n")
+                config.write(f"ligand={ligand}\n")
+                config.write('center_x=')
+                config.write(str(cx))
+                config.write('\n')
+                config.write('center_y=')
+                config.write(str(cy))
+                config.write('\n')
+                config.write('center_z=')
+                config.write(str(cz))
+                config.write('\n')
+                config.write('size_x=')
+                config.write(str(bx))
+                config.write('\n')
+                config.write('size_y=')
+                config.write(str(by))
+                config.write('\n')
+                config.write('size_z=')
+                config.write(str(bz))
+                config.write('\n')
+                config.close()
+                res = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
+                print(res.stdout)
     
     def os_docking(self): # Ebba
         pass
