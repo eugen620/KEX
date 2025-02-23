@@ -16,6 +16,7 @@ class KEX():
         self.raw_filename = filename
         self.pdb_filenames = []
         self.pdbqt_filenames = []
+        self.ligand_filenames = []
 
         # kör clean up och här appenda den till self.pdb_filenames
 
@@ -33,6 +34,9 @@ class KEX():
         self.pdbqt_dir = os.path.join(os.getcwd(), "pdbqt")
         os.makedirs(self.pdbqt_dir, exist_ok = True)
 
+        self.docking_results_dir = os.path.join(os.getcwd(), "docking_results")
+        os.makedirs(self.docking_results_dir, exist_ok = True)
+
         
 
 
@@ -43,8 +47,8 @@ class KEX():
     
     
     
-    def clean_up_dir(self, directory):
-        
+    def clean_up_dir(self, directory): # kanske run den här i __init__
+        # utveckla för docking results också
         if directory == "pdb":
             directory = self.pdb_dir
             self.pdb_filenames = []
@@ -69,7 +73,7 @@ class KEX():
     def find_molecule_coordinates(self): # Ebba
         # tar molekylens namn och chain som input
         # använd self.raw_filename
-        # returnera koordinaterna för center
+        # returnera koordinaterna för center, alternativt spara i attibut self.docking_center, kan användas senare då
         pass
 
     
@@ -205,9 +209,55 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
-    def windows_docking(self): # Eugen
-        pass
+    
+    def mol_to_pdbqt(self, filename):
+        filename = filename[:-4]
+        subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
+        self.ligand_filenames.append(f"{filename}.pdbqt")
+    
 
+    
+    def windows_docking(self, center, boxsize = 20): # Eugen
+        cx = center[0] # byta ut mot class attr när metoden find_molecule_coordinates är gjord
+        cy = center[1]
+        cz = center[2]
+        bx = boxsize
+        by = boxsize
+        bz = boxsize
+
+        
+        for ligand in self.ligand_filenames:
+            for enzyme in self.pdbqt_filenames:
+                config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
+                config.write(f"receptor={self.pdb_dir}/{enzyme}\n")
+                config.write(f"ligand={ligand}\n")
+                config.write('center_x=')
+                config.write(str(cx))
+                config.write('\n')
+                config.write('center_y=')
+                config.write(str(cy))
+                config.write('\n')
+                config.write('center_z=')
+                config.write(str(cz))
+                config.write('\n')
+                config.write('size_x=')
+                config.write(str(bx))
+                config.write('\n')
+                config.write('size_y=')
+                config.write(str(by))
+                config.write('\n')
+                config.write('size_z=')
+                config.write(str(bz))
+                config.write('\n')
+                config.close()
+                res = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out {self.docking_results_dir}/docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
+                
+                #Lös detta bättre
+                os.remove("config.txt")
+                os.remove("log.txt")
+                
+                # spara resultaten från docked filen
+                # display resultaten
     
     def os_docking(self): # Ebba
         pass
