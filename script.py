@@ -16,6 +16,7 @@ class KEX():
         self.raw_filename = filename
         self.pdb_filenames = []
         self.pdbqt_filenames = []
+        self.ligand_filenames = []
 
         # kör clean up och här appenda den till self.pdb_filenames
 
@@ -43,7 +44,7 @@ class KEX():
     
     
     
-    def clean_up_dir(self, directory):
+    def clean_up_dir(self, directory): # kanske run den här i __init__
         
         if directory == "pdb":
             directory = self.pdb_dir
@@ -204,6 +205,13 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}.log")
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
+    
+    
+    def mol_to_pdbqt(self, filename):
+        filename = filename[:-4]
+        subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
+        self.ligand_filenames.append(f"{filename}.pdbqt")
+    
     
     def windows_docking(self): # Eugen
         pass
