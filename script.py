@@ -77,6 +77,14 @@ class KEX():
         # tar molekylens namn och chain som input
         # använd self.raw_filename
         # returnera koordinaterna för center, alternativt spara i attibut self.docking_center, kan användas senare då
+        
+        # Hittar koordinaterna för en molekyl i proteinet och returnerar dess centrum
+        with pymol2.PyMOL() as pm:
+            pm.cmd.load(self.raw_filename, "protein")
+            inhibitor_selection = "resn N10 and chain A"
+            center = pm.cmd.centerofmass(inhibitor_selection)
+            self.docking_center = center
+            return center
         pass
 
     
@@ -85,6 +93,14 @@ class KEX():
         # använd self.raw_filename
         # använd rensa alla molekyler (kan göras som i notebooken eller med ex mdanalysis)
         # returnera clean filen, kör funktionen i __init__
+        
+        # Rensar PDB-filen genom att behålla endast ATOM och TER-rader.
+        clean_filename = self.raw_filename.replace(".pdb", "_clean.pdb")
+        with open(self.raw_filename, "r") as infile, open(clean_filename, "w") as outfile:
+            for line in infile:
+                if line.startswith(("ATOM", "TER")):
+                    outfile.write(line)
+        return clean_filename
         pass
 
     
