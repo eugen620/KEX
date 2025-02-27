@@ -73,19 +73,22 @@ class KEX():
 
     
     
-    def find_molecule_coordinates(self): # Ebba
+    def find_molecule_coordinates(self, molecule_name, chain): # Ebba
         # tar molekylens namn och chain som input
         # använd self.raw_filename
-        # returnera koordinaterna för center, alternativt spara i attibut self.docking_center, kan användas senare då
+
+        # returnera koordinaterna för center genom attibut self.docking_center, kan användas senare
+
         
         # Hittar koordinaterna för en molekyl i proteinet och returnerar dess centrum
         with pymol2.PyMOL() as pm:
             pm.cmd.load(self.raw_filename, "protein")
-            inhibitor_selection = "resn N10 and chain A"
+
+            inhibitor_selection = f"resn {molecule_name} and chain {chain}"
             center = pm.cmd.centerofmass(inhibitor_selection)
             self.docking_center = center
             return center
-        pass
+
 
     
     
@@ -293,7 +296,7 @@ class KEX():
             df = pd.DataFrame(d)
         return df
     
-    def os_docking(self): # Ebba
+    def os_docking(self):
         pass
         
     
