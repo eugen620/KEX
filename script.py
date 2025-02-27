@@ -19,14 +19,18 @@ class KEX():
         self.pdbqt_filenames = []
         self.ligand_filenames = []
 
-        # kör clean up och här appenda den till self.pdb_filenames
-
-        self.pdb_filenames.append(filename) # *** Tillfällig kod *** vi vill egentligen inte lägga in den råa filen här, vi ska fixa en clean up method och sedan append.
-        self.starting_enzyme = self.pdb_filenames[0]
-        
         self.create_directories()
-        self.copy_starting_enzyme_into_pdb_dir() # Skriv om den här sen så att den tar clean versionen av enzymet som skapas i klassen
+        self.clean_up_dir("pdb")
+        self.clean_up_dir("pdbqt")
+        self.clean_up_dir("docking_results")
+        self.clean_up_dir("ligands")
         
+        new_filename = self.clean_up()
+        self.pdb_filenames.append(new_filename) 
+        self.starting_enzyme = self.pdb_filenames[0]
+
+        self.copy_starting_enzyme_into_pdb_dir()
+
 
     def create_directories(self):
         self.pdb_dir = os.path.join(os.getcwd(), "pdb")
@@ -34,6 +38,9 @@ class KEX():
         
         self.pdbqt_dir = os.path.join(os.getcwd(), "pdbqt")
         os.makedirs(self.pdbqt_dir, exist_ok = True)
+
+        self.ligands_dir = os.path.join(os.getcwd(), "ligands")
+        os.makedirs(self.ligands_dir, exist_ok = True)
 
         self.docking_results_dir = os.path.join(os.getcwd(), "docking_results")
         os.makedirs(self.docking_results_dir, exist_ok = True)
@@ -45,6 +52,7 @@ class KEX():
         source = os.path.join(os.getcwd(), self.starting_enzyme)
         destination = os.path.join(self.pdb_dir, self.starting_enzyme)
         shutil.copy2(source, destination)
+        
     
     
     
@@ -53,10 +61,14 @@ class KEX():
         if directory == "pdb":
             directory = self.pdb_dir
             self.pdb_filenames = []
-            self.pdb_filenames.append(self.raw_filename)
+            
         
         elif directory == "docking_results":
-            directory = self.docking_results_dir    
+            directory = self.docking_results_dir
+
+        elif directory == "ligands":
+            directory = self.ligands_dir
+            self.ligand_filenames = []
             
         elif directory == "pdbqt":
             directory = self.pdbqt_dir
@@ -66,7 +78,7 @@ class KEX():
             file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-        self.copy_starting_enzyme_into_pdb_dir()
+        #self.copy_starting_enzyme_into_pdb_dir()
     
     def viz(self): # Saga
         pass
@@ -104,7 +116,7 @@ class KEX():
                 if line.startswith(("ATOM", "TER")):
                     outfile.write(line)
         return clean_filename
-        pass
+        
 
     
     
@@ -213,7 +225,7 @@ class KEX():
 
     
     def create_pdbqt(self): # Eugen
-        
+       
         for filename in self.pdb_filenames:
             filename = filename[:-4]
             subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level CRITICAL")
@@ -236,6 +248,10 @@ class KEX():
         filename = filename[:-4]
         subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
         self.ligand_filenames.append(f"{filename}.pdbqt")
+        
+        source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
+        destination = os.path.join(self.ligands_dir, f"{filename}.pdbqt")
+        shutil.copy2(source, destination)
     
 
     
@@ -255,7 +271,7 @@ class KEX():
             for enzyme in self.pdbqt_filenames:
                 config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
                 config.write(f"receptor={self.pdbqt_dir}/{enzyme}\n")
-                config.write(f"ligand={ligand}\n")
+                config.write(f"ligand={self.ligands_dir}/{ligand}\n")
                 config.write('center_x=')
                 config.write(str(cx))
                 config.write('\n')
