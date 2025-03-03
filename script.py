@@ -6,8 +6,24 @@ import os
 import sys
 import shutil
 import subprocess
+import warnings
 import pandas as pd
-from dict_module import aa_dict, aa_list
+
+
+aa_dict = {
+    "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
+    "GLN": "Q", "GLU": "E", "GLY": "G", "HIS": "H", "ILE": "I",
+    "LEU": "L", "LYS": "K", "MET": "M", "PHE": "F", "PRO": "P",
+    "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"
+}
+
+# den här kommer inte behövas om vi tar bort at man ska generera alla mutationer. 
+aa_list = [
+    "ALA", "ARG", "ASN", "ASP", "CYS",
+    "GLN", "GLU", "GLY", "HIS", "ILE",
+    "LEU", "LYS", "MET", "PHE", "PRO",
+    "SER", "THR", "TRP", "TYR", "VAL"
+]
 
 # Kanske vi borde skapa en metod för att göra smiles till .mol format
 
@@ -224,13 +240,15 @@ class KEX():
              
 
     
-    def create_pdbqt(self): # Eugen
+    def create_pdbqt(self):
        
         for filename in self.pdb_filenames:
             filename = filename[:-4]
             subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level CRITICAL")
             u = mda.Universe(f"{self.pdbqt_dir}/{filename}.pqr")
-            u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
 
             # Removes the first two lines, makes the file work in Vina
             with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
@@ -244,7 +262,7 @@ class KEX():
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     
-    def mol_to_pdbqt(self, filename): # kanske göra så de sparas i en annan mapp
+    def mol_to_pdbqt(self, filename):
         filename = filename[:-4]
         subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
         self.ligand_filenames.append(f"{filename}.pdbqt")
@@ -256,8 +274,8 @@ class KEX():
     
 
     
-    def windows_docking(self, center, boxsize = 20): # Snygga till strukturen
-        cx = center[0] # byta ut mot class attr när metoden find_molecule_coordinates är gjord
+    def windows_docking(self, center, boxsize = 20): 
+        cx = center[0]
         cy = center[1]
         cz = center[2]
         bx = boxsize
@@ -270,7 +288,7 @@ class KEX():
             results = []
             enzymes = []
             for enzyme in self.pdbqt_filenames:
-                config = open('config.txt', mode='w') # kanaske skapa olika filer och spara de i en egen mapp
+                config = open('config.txt', mode='w')
                 config.write(f"receptor={self.pdbqt_dir}/{enzyme}\n")
                 config.write(f"ligand={self.ligands_dir}/{ligand}\n")
                 config.write('center_x=')
