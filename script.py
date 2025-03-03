@@ -98,7 +98,7 @@ class KEX():
 
             inhibitor_selection = f"resn {molecule_name} and chain {chain}"
             center = pm.cmd.centerofmass(inhibitor_selection)
-            self.docking_center = center
+            self.docking_center = center # vi får fundera på om vi vill ha kvar den här, nu används return i 
             return center
 
 
@@ -252,6 +252,7 @@ class KEX():
         source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
         destination = os.path.join(self.ligands_dir, f"{filename}.pdbqt")
         shutil.copy2(source, destination)
+        os.remove(f"{filename}.pdbqt")
     
 
     
