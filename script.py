@@ -1,4 +1,4 @@
-# imorts
+
 import pymol2
 import nglview as nv
 import MDAnalysis as mda
@@ -78,7 +78,6 @@ class KEX():
             directory = self.pdb_dir
             self.pdb_filenames = []
             
-        
         elif directory == "docking_results":
             directory = self.docking_results_dir
 
@@ -272,7 +271,12 @@ class KEX():
         shutil.copy2(source, destination)
         os.remove(f"{filename}.pdbqt")
     
-
+    def add_ligand(self, filename):
+        source = os.path.join(os.getcwd(), filename)
+        destination = os.path.join(self.ligands_dir, filename)
+        shutil.copy2(source, destination)
+        # os.remove(filename)
+        self.ligand_filenames.append(filename)
     
     def windows_docking(self, center, boxsize = 20): 
         cx = center[0]
