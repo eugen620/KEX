@@ -36,9 +36,9 @@ class KEX():
         self.ligand_filenames = []
 
         self.create_directories()
-        self.clean_up_dir("pdb")
-        self.clean_up_dir("pdbqt")
-        self.clean_up_dir("docking_results")
+        #self.clean_up_dir("pdb")
+        #self.clean_up_dir("pdbqt")
+        #self.clean_up_dir("docking_results")
         self.clean_up_dir("ligands")
         
         new_filename = self.clean_up()
@@ -101,13 +101,7 @@ class KEX():
     
     
     def find_molecule_coordinates(self, molecule_name, chain): # Ebba
-        # tar molekylens namn och chain som input
-        # använd self.raw_filename
 
-        # returnera koordinaterna för center genom attibut self.docking_center, kan användas senare
-
-        
-        # Hittar koordinaterna för en molekyl i proteinet och returnerar dess centrum
         with pymol2.PyMOL() as pm:
             pm.cmd.load(self.raw_filename, "protein")
 
@@ -119,16 +113,18 @@ class KEX():
 
     
     
-    def clean_up(self): # Ebba
-        # använd self.raw_filename
-        # använd rensa alla molekyler (kan göras som i notebooken eller med ex mdanalysis)
-        # returnera clean filen, kör funktionen i __init__
-        
-        # Rensar PDB-filen genom att behålla endast ATOM och TER-rader.
+    def clean_up(self): # denna innehåller massa extra grejer som är specifika för vår pdb
         clean_filename = self.raw_filename.replace(".pdb", "_clean.pdb")
         with open(self.raw_filename, "r") as infile, open(clean_filename, "w") as outfile:
             for line in infile:
                 if line.startswith(("ATOM", "TER")):
+                    outfile.write(line) 
+                elif line.startswith("HETATM") and "N10 A" in line:
+                    line = "ATOM  " + line[6:]  # Byt ut HETATM mot ATOM för N10
+                    #line = line.replace("N10", "SER")
+                    outfile.write(line)
+                elif line.startswith("HETATM") and "N10" in line:
+                    line = "ATOM  " + line[6:]
                     outfile.write(line)
         return clean_filename
         
@@ -141,7 +137,7 @@ class KEX():
 
 
     
-    def mutations(self, subunits = 'All', positions = None, mutations = None): 
+    def mutations(self, subunits = 'All', positions = None, mutations = None, label = None): 
         # Fixa så man kan generera alla kombinationer för två residue positioner
         # Snygga till koden
         # Kolla på hur man kan utcekla subinits delen så man kan göra ex en mutation på en subunit och en helt annan mutation på en annan subunit
@@ -192,7 +188,8 @@ class KEX():
                     mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
                     new_filename.append(mutation_str)
                 
-        
+                if label is not None:
+                    new_filename.append(label)
                 new_filename = f"{'_'.join(new_filename)}.pdb"
                 self.pdb_filenames.append(new_filename)
 
@@ -243,7 +240,7 @@ class KEX():
        
         for filename in self.pdb_filenames:
             filename = filename[:-4]
-            subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level CRITICAL")
+            subprocess.run(f"pdb2pqr30 --keep-chain --with-ph 7.4 --ff=PARSE {self.pdb_dir}/{filename}.pdb {self.pdbqt_dir}/{filename}.pqr -q --log-level INFO") # CRITICAL
             u = mda.Universe(f"{self.pdbqt_dir}/{filename}.pqr")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)
@@ -258,6 +255,28 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
             os.remove(f"{self.pdbqt_dir}/{filename}.log")
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
+            self.pdbqt_filenames.append(f"{filename}.pdbqt")
+
+    def create_pdbqt_no_charges(self):  
+        for filename in self.pdb_filenames:
+            filename = filename[:-4]
+            
+            with pymol2.PyMOL() as pm:
+                pm.cmd.load(f"{self.pdb_dir}/{filename}.pdb", "mol")
+                pm.cmd.h_add("mol")
+                pm.cmd.save(f"{self.pdb_dir}/{filename}.pdb", "mol")
+            
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                u = mda.Universe(f"{self.pdb_dir}/{filename}.pdb")
+                u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
+            
+            with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
+                for i, line in enumerate(rf):
+                    if i >= 2:
+                        wf.write(line)
+            
+            os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     
