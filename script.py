@@ -1,6 +1,7 @@
 
 import pymol2
 import nglview as nv
+import py3Dmol
 import MDAnalysis as mda
 import os
 import sys
@@ -8,7 +9,11 @@ import shutil
 import subprocess
 import warnings
 import pandas as pd
+from openbabel import openbabel
 
+from rdkit import Chem
+from rdkit.Chem import AllChem, Draw, rdMolTransforms
+from rdkit.Chem.Draw import MolsToGridImage, IPythonConsole
 
 aa_dict = {
     "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
@@ -119,24 +124,73 @@ class KEX():
             for line in infile:
                 if line.startswith(("ATOM", "TER")):
                     outfile.write(line) 
-                elif line.startswith("HETATM") and "N10 A" in line:
-                    line = "ATOM  " + line[6:]  # Byt ut HETATM mot ATOM för N10
-                    #line = line.replace("N10", "SER")
-                    outfile.write(line)
                 elif line.startswith("HETATM") and "N10" in line:
-                    line = "ATOM  " + line[6:]
+                    line = "ATOM  " + line[6:]  # Gör ingen skillnad någon skillnad, hela N10 tas bort av pdb2pqr när den inte känner igen N10 
+                    #line = line.replace("N10", "SER") # Denna rad gör att pqr filen inte kan skapas eftersom SER inte ser ut så som vi ger den
                     outfile.write(line)
         return clean_filename
         
+    def extract_N10_atoms(self, filename):
+        N10_lines = []
+        with open(filename, 'r') as infile:
+            for line in infile:
+                if "N10" in line:
+                    N10_lines.append(line)
+        self.N10_lines_list = N10_lines
 
+    def get_last_atom_line(self, filepath):
+        with open(filepath, "r") as f:
+            lines = f.readlines()
+            for line in reversed(lines):
+                if line.startswith(("ATOM", "HETATM")):
+                    return line
+        return None 
+
+    def append_N10_atoms_to_pdbqt(self, filename):
+        with open(f"{self.pdbqt_dir}/{filename}", 'a') as infile:
+            last_atom_line = self.get_last_atom_line(f"{self.pdbqt_dir}/{filename}")
+            last_id = int(last_atom_line[6:11]) 
+            atom_id = last_id+1
+            for line in self.N10_lines_list:
+                
+                atom_name = line[12:16].strip()
+                atom_name_formatted = atom_name.ljust(4)
+                res_name = "N10"
+                chain_id = line[21]
+                res_num = line[22:26].strip()
+                x = float(line[30:38])
+                y = float(line[38:46])
+                z = float(line[46:54])
+                element = line[76:78].strip() if len(line) >= 78 else atom_name[0]
+                infile.write(
+    f"ATOM  {atom_id:5d} {atom_name_formatted}{res_name:>4} {chain_id}{int(res_num):4d}    "
+    f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00     0.000{element:>2}\n"
+)
+                atom_id += 1
+
+                
+    
+    def create_molecule(self, smiles, name, show_structure = False):
+        """creates a molecule in .mol from smiles"""
+        molecule = Chem.AddHs(Chem.MolFromSmiles(smiles))
+        AllChem.EmbedMolecule(molecule)
+        AllChem.MMFFOptimizeMolecule(molecule)
+        # Convert to MOL format
+        mol = Chem.MolToMolBlock(molecule)
+        # Visualize with py3Dmol
+        if show_structure:
+            viewer = py3Dmol.view(width=400, height=400)
+            viewer.addModel(mol, "mol")
+            viewer.setStyle({"stick": {}})
+            viewer.zoomTo()
+            viewer.show()
+        # Save as MOL file
+        mol_filename = f"{name}.mol"
+        Chem.MolToMolFile(molecule, mol_filename)
+        print(f"Molecule saved as {mol_filename}")
     
     
-    def add_functional_group(self): # Saga
-        # testa kolla pymol
-        pass
-
-
-    
+        
     def mutations(self, subunits = 'All', positions = None, mutations = None, label = None): 
         # Fixa så man kan generera alla kombinationer för två residue positioner
         # Snygga till koden
@@ -282,15 +336,38 @@ class KEX():
     
     def mol_to_pdbqt(self, filename):
         filename = filename[:-4]
-        subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt --partialcharge gasteiger")
+        subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt -h --partialcharge gasteiger")
         self.ligand_filenames.append(f"{filename}.pdbqt")
         
         source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
         destination = os.path.join(self.ligands_dir, f"{filename}.pdbqt")
         shutil.copy2(source, destination)
         os.remove(f"{filename}.pdbqt")
+
+    def mol_to_pdbqt_new(self, filename, add_ligand = False):
+        filename = filename[:-4]
+        obConversion = openbabel.OBConversion()
+        obConversion.SetInAndOutFormats("mol", "pdbqt")
+        
+        mol = openbabel.OBMol()
+        obConversion.ReadFile(mol, f"{filename}.mol")
+        mol.AddHydrogens()
+
+        # Lägg till laddningar
+        charge_model = openbabel.OBChargeModel.FindType("gasteiger")
+        charge_model.ComputeCharges(mol)
+        obConversion.AddOption("h")
+        obConversion.WriteFile(mol, f'{filename}.pdbqt')
+        obConversion.CloseOutFile()
+
+        if add_ligand:
+            self.ligand_filenames.append(f"{filename}.pdbqt")
+            source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
+            destination = os.path.join(self.ligands_dir, f"{filename}.pdbqt")
+            shutil.copy2(source, destination)
+            os.remove(f"{filename}.pdbqt")
     
-    def add_ligand(self, filename):
+    def add_ligand(self, filename): #lägg in den i funktionen över
         source = os.path.join(os.getcwd(), filename)
         destination = os.path.join(self.ligands_dir, filename)
         shutil.copy2(source, destination)
