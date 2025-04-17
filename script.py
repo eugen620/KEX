@@ -298,7 +298,7 @@ class KEX():
             u = mda.Universe(f"{self.pdbqt_dir}/{filename}.pqr")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)
-                na
+                u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
 
             # Removes the first two lines, makes the file work in Vina
             with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
