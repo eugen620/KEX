@@ -11,6 +11,11 @@ import warnings
 import pandas as pd
 from openbabel import openbabel
 
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+from sys import stdout
+
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdMolTransforms
 from rdkit.Chem.Draw import MolsToGridImage, IPythonConsole
@@ -182,6 +187,7 @@ class KEX():
             viewer = py3Dmol.view(width=400, height=400)
             viewer.addModel(mol, "mol")
             viewer.setStyle({"stick": {}})
+            viewer.setBackgroundColor("black")
             viewer.zoomTo()
             viewer.show()
         # Save as MOL file
@@ -287,9 +293,41 @@ class KEX():
         log_file.close()
         
            
-             
+    def molecular_dynamics(self):
+  
+        for i, filename in enumerate(self.pdb_filenames):
+            filename = filename[:-4]
+            pdb = PDBFile(f"{self.pdb_dir}/{filename}.pdb")
+            # Specify the forcefield
+            forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+            modeller = Modeller(pdb.topology, pdb.positions)
+            modeller.deleteWater()
+            residues=modeller.addHydrogens(forcefield)
 
-    
+            # System setup
+            system = forcefield.createSystem(modeller.topology, nonbondedMethod=NoCutoff, constraints=HBonds)
+            integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
+            simulation = Simulation(modeller.topology, system, integrator)
+            simulation.context.setPositions(modeller.positions)
+
+            print("Minimizing energy")
+            simulation.minimizeEnergy()
+
+            # Setup simulation
+            simulation.reporters.append(PDBReporter('output.pdb', 1000))
+            simulation.reporters.append(StateDataReporter(stdout, 100, step=True, potentialEnergy=True, temperature=True, volume=True))
+            simulation.reporters.append(StateDataReporter("md_log.txt", 100, step=True, potentialEnergy=True, temperature=True, volume=True))
+
+            print("Running NVT")
+            simulation.step(10000)
+            
+            print("Minimizing energy")
+            simulation.minimizeEnergy()
+            
+            positions = simulation.context.getState(getPositions=True).getPositions()
+            PDBFile.writeFile(simulation.topology, positions, open(f'{self.pdb_dir}/{filename}_md.pdb', 'w'))
+            self.pdb_filenames[i] = f'{filename}_md.pdb'
+                
     def create_pdbqt(self):
        
         for filename in self.pdb_filenames:
