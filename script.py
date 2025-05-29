@@ -62,7 +62,7 @@ class KEX():
         #self.clean_up_dir("pdb")
         #self.clean_up_dir("pdbqt")
         #self.clean_up_dir("docking_results")
-        self.clean_up_dir("ligands")
+        #self.clean_up_dir("ligands")
         
         new_filename = self.clean_up()
         self.pdb_filenames.append(new_filename) 
@@ -336,8 +336,6 @@ class KEX():
         Side Effects
         ------------
         - Modifies each entry in self.pdb_filenames to point to the MD-relaxed structure.
-        - Writes simulation output to 'output.pdb' and logs to 'md_log.txt'.
-        - Prints simulation progress to stdout.
         """
         for i, filename in enumerate(self.pdb_filenames):
             filename = filename[:-4]
@@ -354,23 +352,25 @@ class KEX():
             simulation = Simulation(modeller.topology, system, integrator)
             simulation.context.setPositions(modeller.positions)
 
-            print("Minimizing energy")
+            
             simulation.minimizeEnergy()
 
             # Setup simulation
-            simulation.reporters.append(PDBReporter('output.pdb', 1000))
-            simulation.reporters.append(StateDataReporter(stdout, 100, step=True, potentialEnergy=True, temperature=True, volume=True))
-            simulation.reporters.append(StateDataReporter("md_log.txt", 100, step=True, potentialEnergy=True, temperature=True, volume=True))
+            
+            #simulation.reporters.append(StateDataReporter(stdout, 100, step=True, potentialEnergy=True, temperature=True, volume=True))
+            #simulation.reporters.append(StateDataReporter("md_log.txt", 100, step=True, potentialEnergy=True, temperature=True, volume=True))
 
-            print("Running NVT")
+            # Start simulation
+            print(f"Running MD simulation on {filename}")
             simulation.step(10000)
             
-            print("Minimizing energy")
+            
             simulation.minimizeEnergy()
             
             positions = simulation.context.getState(getPositions=True).getPositions()
             PDBFile.writeFile(simulation.topology, positions, open(f'{self.pdb_dir}/{filename}_md.pdb', 'w'))
             self.pdb_filenames[i] = f'{filename}_md.pdb'
+            print(f"File saved as {filename}_md.pdb")
                 
     def create_pdbqt(self):
         """
@@ -535,6 +535,61 @@ class KEX():
             df = pd.DataFrame(d)
         return df
     
+    def smina_docking(self, center, boxsize=20, scoring_file="custom_scoring.txt"):
+        """
+        Perform molecular docking using smina for all enzyme-ligand combinations.
+    
+        Parameters
+        ----------
+        center : tuple of float
+            Center coordinates (x, y, z) for the docking box.
+        boxsize : int, optional
+            Size of the docking box in Ångström (default 20).
+        scoring_file : str, optional
+            Path to custom scoring function file for smina.
+    
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing binding affinities (in kcal/mol) for each ligand-enzyme pair.
+        """
+        
+        cx, cy, cz = center
+        bx = by = bz = boxsize
+    
+        d = {}
+    
+        for ligand in self.ligand_filenames:
+            results = []
+            enzymes = []
+            for enzyme in self.pdbqt_filenames:
+                new_filename = f"docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt"
+                log_filename = f"{ligand[:-6]}_{enzyme[:-6]}_smina.log"
+    
+                r = subprocess.run(
+                    f'smina --receptor {self.pdbqt_dir}/{enzyme} '
+                    f'--ligand {self.ligands_dir}/{ligand} '
+                    f'--out {self.docking_results_dir}/{new_filename} '
+                    f'--custom_scoring {scoring_file} '
+                    f'--center_x {cx} --center_y {cy} --center_z {cz} '
+                    f'--size_x {bx} --size_y {by} --size_z {bz} '
+                    f'--exhaustiveness 20 --num_modes 9 --log {self.docking_results_dir}/{log_filename}',
+                    capture_output=True, text=True, shell=True
+                )
+                os.remove(f"{self.docking_results_dir}/{log_filename}")
+                enzymes.append(enzyme[:-6])
+    
+                with open(f"{self.docking_results_dir}/{new_filename}") as rf:
+                    next(rf)
+                    res = float(rf.readline().split()[2])
+    
+                results.append(res)
+    
+            d[f"{ligand[:-6]} (kcal/mol)"] = pd.Series(results, index=enzymes)
+            df = pd.DataFrame(d)
+    
+        return df
+
 
         
     
