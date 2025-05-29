@@ -27,19 +27,32 @@ aa_dict = {
     "SER": "S", "THR": "T", "TRP": "W", "TYR": "Y", "VAL": "V"
 }
 
-# den här kommer inte behövas om vi tar bort at man ska generera alla mutationer. 
-aa_list = [
-    "ALA", "ARG", "ASN", "ASP", "CYS",
-    "GLN", "GLU", "GLY", "HIS", "ILE",
-    "LEU", "LYS", "MET", "PHE", "PRO",
-    "SER", "THR", "TRP", "TYR", "VAL"
-]
 
-# Kanske vi borde skapa en metod för att göra smiles till .mol format
 
 class KEX():
 
     def __init__(self, filename):
+        """
+        Initialize a KEX object and prepare the working environment.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the input PDB file.
+
+        Attributes
+        ----------
+        raw_filename : str
+            The original filename provided by the user.
+        pdb_filenames : list
+            List storing the cleaned PDB filenames.
+        pdbqt_filenames : list
+            List storing converted PDBQT filenames.
+        ligand_filenames : list
+            List of filenames for prepared ligand structures.
+        starting_enzyme : str
+            The filename of the initial enzyme structure.
+        """
         self.raw_filename = filename
         self.pdb_filenames = []
         self.pdbqt_filenames = []
@@ -59,6 +72,17 @@ class KEX():
 
 
     def create_directories(self):
+        """
+        Create necessary directories for storing input and output files.
+    
+        This method creates the following folders in the current working directory:
+        - 'pdb' for cleaned PDB files
+        - 'pdbqt' for converted PDBQT files
+        - 'ligands' for prepared ligand structures
+        - 'docking_results' for output from docking simulations
+    
+        Existing directories are preserved.
+        """
         self.pdb_dir = os.path.join(os.getcwd(), "pdb")
         os.makedirs(self.pdb_dir, exist_ok = True) 
         
@@ -74,7 +98,13 @@ class KEX():
         
 
 
-    def copy_starting_enzyme_into_pdb_dir(self):        
+    def copy_starting_enzyme_into_pdb_dir(self):
+        """
+        Copy the starting enzyme structure file into the 'pdb' directory.
+    
+        This method copies the cleaned enzyme PDB file from the current working directory
+        to the designated 'pdb' folder for further processing.
+        """
         source = os.path.join(os.getcwd(), self.starting_enzyme)
         destination = os.path.join(self.pdb_dir, self.starting_enzyme)
         shutil.copy2(source, destination)
@@ -82,8 +112,23 @@ class KEX():
     
     
     
-    def clean_up_dir(self, directory): # kanske run den här i __init__
-        
+    def clean_up_dir(self, directory):
+        """
+        Remove all files from a specified working directory and reset related filename lists.
+    
+        Parameters
+        ----------
+        directory : str
+            The name of the directory to clean. Valid options are:
+            - "pdb": deletes all files in the 'pdb' folder and resets self.pdb_filenames
+            - "pdbqt": deletes all files in the 'pdbqt' folder and resets self.pdbqt_filenames
+            - "ligands": deletes all files in the 'ligands' folder and resets self.ligand_filenames
+            - "docking_results": deletes all files in the 'docking_results' folder
+    
+        Notes
+        -----
+        This method only removes regular files (not subdirectories).
+        """
         if directory == "pdb":
             directory = self.pdb_dir
             self.pdb_filenames = []
@@ -105,78 +150,83 @@ class KEX():
                 os.remove(file_path)
         #self.copy_starting_enzyme_into_pdb_dir()
     
-    def viz(self): # Saga
-        pass
-
-    
     
     def find_molecule_coordinates(self, molecule_name, chain): # Ebba
-
+        """
+        Calculate the center of mass coordinates for a specific molecule within a given chain.
+    
+        Parameters
+        ----------
+        molecule_name : str
+            The residue name of the molecule to locate (e.g., an inhibitor or ligand).
+        chain : str
+            The chain ID where the molecule is located.
+    
+        Returns
+        -------
+        tuple of float
+            A 3D coordinate tuple representing the center of mass of the selected molecule.
+    
+        Side Effects
+        ------------
+        Sets the attribute `self.docking_center` to the computed coordinates.
+        """
         with pymol2.PyMOL() as pm:
             pm.cmd.load(self.raw_filename, "protein")
 
-            inhibitor_selection = f"resn {molecule_name} and chain {chain}"
-            center = pm.cmd.centerofmass(inhibitor_selection)
-            self.docking_center = center # vi får fundera på om vi vill ha kvar den här, nu används return i 
+            molecule_selection = f"resn {molecule_name} and chain {chain}"
+            center = pm.cmd.centerofmass(molecule_selection)
+            self.docking_center = center 
             return center
 
 
     
     
-    def clean_up(self): # denna innehåller massa extra grejer som är specifika för vår pdb
+    def clean_up(self):
+        """
+        Create a cleaned version of the original PDB file containing only relevant structural lines.
+    
+        This method reads the raw PDB file and writes a new file that includes only lines
+        starting with "ATOM" or "TER", effectively removing any unnecessary lines.
+    
+        Returns
+        -------
+        str
+            The filename of the cleaned PDB file (with suffix '_clean.pdb').
+        """
         clean_filename = self.raw_filename.replace(".pdb", "_clean.pdb")
         with open(self.raw_filename, "r") as infile, open(clean_filename, "w") as outfile:
             for line in infile:
                 if line.startswith(("ATOM", "TER")):
                     outfile.write(line) 
-                elif line.startswith("HETATM") and "N10" in line:
-                    line = "ATOM  " + line[6:]  # Gör ingen skillnad någon skillnad, hela N10 tas bort av pdb2pqr när den inte känner igen N10 
-                    #line = line.replace("N10", "SER") # Denna rad gör att pqr filen inte kan skapas eftersom SER inte ser ut så som vi ger den
-                    outfile.write(line)
         return clean_filename
         
-    def extract_N10_atoms(self, filename):
-        N10_lines = []
-        with open(filename, 'r') as infile:
-            for line in infile:
-                if "N10" in line:
-                    N10_lines.append(line)
-        self.N10_lines_list = N10_lines
-
-    def get_last_atom_line(self, filepath):
-        with open(filepath, "r") as f:
-            lines = f.readlines()
-            for line in reversed(lines):
-                if line.startswith(("ATOM", "HETATM")):
-                    return line
-        return None 
-
-    def append_N10_atoms_to_pdbqt(self, filename):
-        with open(f"{self.pdbqt_dir}/{filename}", 'a') as infile:
-            last_atom_line = self.get_last_atom_line(f"{self.pdbqt_dir}/{filename}")
-            last_id = int(last_atom_line[6:11]) 
-            atom_id = last_id+1
-            for line in self.N10_lines_list:
-                
-                atom_name = line[12:16].strip()
-                atom_name_formatted = atom_name.ljust(4)
-                res_name = "N10"
-                chain_id = line[21]
-                res_num = line[22:26].strip()
-                x = float(line[30:38])
-                y = float(line[38:46])
-                z = float(line[46:54])
-                element = line[76:78].strip() if len(line) >= 78 else atom_name[0]
-                infile.write(
-    f"ATOM  {atom_id:5d} {atom_name_formatted}{res_name:>4} {chain_id}{int(res_num):4d}    "
-    f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00     0.000{element:>2}\n"
-)
-                atom_id += 1
 
                 
     
     def create_molecule(self, smiles, name, show_structure = False):
-        """creates a molecule in .mol from smiles"""
+        """
+        Generate a 3D molecule from a SMILES string and save it as a .mol file.
+    
+        This method creates a hydrogenated molecule from a SMILES string, embeds it in 3D space,
+        performs MMFF geometry optimization, and saves it as a .mol file. Optionally, it displays 
+        the structure in an 3D viewer using py3Dmol.
+    
+        Parameters
+        ----------
+        smiles : str
+            The SMILES string representing the molecular structure.
+        name : str
+            The base name used to save the .mol file (without extension).
+        show_structure : bool, optional
+            If True, displays the optimized molecule in a 3D viewer (default is False).
+    
+        Side Effects
+        ------------
+        - Saves a .mol file with the optimized molecular structure.
+        - Optionally displays the structure in an interactive window.
+        - Prints the file save confirmation to the console.
+        """
         molecule = Chem.AddHs(Chem.MolFromSmiles(smiles))
         AllChem.EmbedMolecule(molecule)
         AllChem.MMFFOptimizeMolecule(molecule)
@@ -197,47 +247,61 @@ class KEX():
     
     
         
-    def mutations(self, subunits = 'All', positions = None, mutations = None, label = None): 
-        # Fixa så man kan generera alla kombinationer för två residue positioner
-        # Snygga till koden
-        # Kolla på hur man kan utcekla subinits delen så man kan göra ex en mutation på en subunit och en helt annan mutation på en annan subunit
+    def mutations(self, subunits='All', positions=None, mutations=None, label=None):
+        """
+        Apply one or more point mutations to specified residue positions using PyMOL.
+    
+        If subunits is set to 'All', mutations are applied to all chains. Otherwise, the user can
+        specify which chains to mutate. The resulting structure is saved as a PDB file with a
+        descriptive filename, and all PyMOL output is logged.
+    
+        Parameters
+        ----------
+        subunits : str or list of str
+            'All' to mutate all chains, or a list of specific chain IDs.
+        positions : int or list of int
+            Residue positions to mutate.
+        mutations : str or list of str
+            Target residue names (3-letter codes) to mutate to.
+        label : str, optional
+            Optional label to include in the output filename.
+        """
         
+    
         def apply_mutation():
             pm.cmd.get_wizard().set_mode(mutation)
             pm.cmd.get_wizard().do_select(f"/MutProt//{chain}/{pos}/")
             pm.cmd.get_wizard().apply()              
-        
-        
+    
         # Kolla upp något snyggt sätt att hantera felaktiga inputs
         if positions == None or mutations == None: 
             return "Some error message"
-        
+    
         if type(positions) == int:
             positions = [positions]
-        
+    
         if subunits != 'All' and type(subunits) != list:
             return "Some error message"
-
-        
+    
         original_stdout = sys.stdout
         log_file = open("mutations_log.txt", "w")
         sys.stdout = log_file
-        
+    
         with pymol2.PyMOL() as pm:
             pm.cmd.load(self.starting_enzyme, "MutProt")
             pm.cmd.wizard("mutagenesis")
             pm.cmd.refresh_wizard()
-        
+    
             if subunits == 'All':
                 chains = pm.cmd.get_chains("MutProt")
             else:
                 chains = subunits 
-
+    
             if mutations == "All":
                 mutations = aa_list
-            
+    
             new_filename = [] 
-
+    
             if len(positions) == len(mutations):
                 for i, pos in enumerate(positions):                                        
                     mutation = mutations[i]
@@ -247,54 +311,34 @@ class KEX():
                         apply_mutation()
                     mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
                     new_filename.append(mutation_str)
-                
+    
                 if label is not None:
                     new_filename.append(label)
                 new_filename = f"{'_'.join(new_filename)}.pdb"
                 self.pdb_filenames.append(new_filename)
-
-
+    
                 output_path = os.path.join(self.pdb_dir, new_filename)
                 pm.cmd.save(output_path, "MutProt")
-
-            else:
-                for pos in positions:
-                    for mutation in mutations:
-                        new_filename = []
-
-                        pm.cmd.delete("MutProt")
-                        pm.cmd.load(self.starting_enzyme, "MutProt")
-                        pm.cmd.wizard("mutagenesis")
-                        pm.cmd.refresh_wizard()
-                    
-                        for chain in chains:
-                            model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
-                            starting_aa = model.atom[0].resn
-                            apply_mutation()
-                    
-                        
-                        if starting_aa == mutation:    
-                            continue
-                        pm.cmd.set_wizard()
-                    
-                        mutation_str = f"{aa_dict[starting_aa]}{pos}{aa_dict[mutation]}"
-                        new_filename.append(mutation_str)               
-                    
-                        new_filename = f"{'_'.join(new_filename)}.pdb"
-                        self.pdb_filenames.append(new_filename)
-
-                        output_path = os.path.join(self.pdb_dir, new_filename)
-                        pm.cmd.save(output_path, "MutProt")
-            
-        
-
-
+    
         sys.stdout = original_stdout  
         log_file.close()
+
         
            
     def molecular_dynamics(self):
-  
+        """
+        Run energy minimization and short NVT molecular dynamics simulations for each PDB structure.
+    
+        For each structure in self.pdb_filenames, this method sets up an OpenMM simulation using
+        the Amber14 force field, performs energy minimization, runs 10,000 steps of NVT dynamics,
+        and saves the final structure as a new PDB file with '_md' appended to the name.
+    
+        Side Effects
+        ------------
+        - Modifies each entry in self.pdb_filenames to point to the MD-relaxed structure.
+        - Writes simulation output to 'output.pdb' and logs to 'md_log.txt'.
+        - Prints simulation progress to stdout.
+        """
         for i, filename in enumerate(self.pdb_filenames):
             filename = filename[:-4]
             pdb = PDBFile(f"{self.pdb_dir}/{filename}.pdb")
@@ -329,6 +373,19 @@ class KEX():
             self.pdb_filenames[i] = f'{filename}_md.pdb'
                 
     def create_pdbqt(self):
+        """
+        Convert PDB structures to PDBQT format using pdb2pqr30 and MDAnalysis.
+    
+        For each file in self.pdb_filenames:
+        - Runs pdb2pqr30 to assign charges and add hydrogens.
+        - Converts the resulting .pqr file to .pdbqt using MDAnalysis.
+        - Cleans up intermediate files.
+        - Appends the final .pdbqt filename to self.pdbqt_filenames.
+    
+        Note
+        ----
+        Removes the first two lines of the .pdbqt to ensure compatibility with AutoDock Vina.
+        """
        
         for filename in self.pdb_filenames:
             filename = filename[:-4]
@@ -349,40 +406,27 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
             self.pdbqt_filenames.append(f"{filename}.pdbqt")
 
-    def create_pdbqt_no_charges(self):  
-        for filename in self.pdb_filenames:
-            filename = filename[:-4]
-            
-            with pymol2.PyMOL() as pm:
-                pm.cmd.load(f"{self.pdb_dir}/{filename}.pdb", "mol")
-                pm.cmd.h_add("mol")
-                pm.cmd.save(f"{self.pdb_dir}/{filename}.pdb", "mol")
-            
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", UserWarning)
-                u = mda.Universe(f"{self.pdb_dir}/{filename}.pdb")
-                u.atoms.write(f'{self.pdbqt_dir}/{filename}_temp.pdbqt')
-            
-            with open(f"{self.pdbqt_dir}/{filename}_temp.pdbqt") as rf, open(f"{self.pdbqt_dir}/{filename}.pdbqt", 'w') as wf:
-                for i, line in enumerate(rf):
-                    if i >= 2:
-                        wf.write(line)
-            
-            os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
-            self.pdbqt_filenames.append(f"{filename}.pdbqt")
     
     
-    def mol_to_pdbqt(self, filename):
-        filename = filename[:-4]
-        subprocess.run(f"obabel {filename}.mol -O {filename}.pdbqt -h --partialcharge gasteiger")
-        self.ligand_filenames.append(f"{filename}.pdbqt")
-        
-        source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
-        destination = os.path.join(self.ligands_dir, f"{filename}.pdbqt")
-        shutil.copy2(source, destination)
-        os.remove(f"{filename}.pdbqt")
+
 
     def mol_to_pdbqt_new(self, filename, add_ligand = False):
+        """
+        Convert a .mol file to .pdbqt format using Open Babel and optionally move it to the ligand directory.
+    
+        Parameters
+        ----------
+        filename : str
+            The name of the .mol file to convert (with extension).
+        add_ligand : bool, optional
+            If True, adds the resulting .pdbqt file to self.ligand_filenames and moves it to the 'ligands' folder.
+    
+        Side Effects
+        ------------
+        - Creates a .pdbqt file from the input .mol file using Gasteiger charges.
+        - Optionally updates ligand_filenames and moves the file to the ligand directory.
+        """
+        
         filename = filename[:-4]
         obConversion = openbabel.OBConversion()
         obConversion.SetInAndOutFormats("mol", "pdbqt")
@@ -413,6 +457,28 @@ class KEX():
         self.ligand_filenames.append(filename)
     
     def windows_docking(self, center, boxsize = 20): 
+        """
+        Perform molecular docking on Windows using AutoDock Vina for all enzyme-ligand combinations.
+    
+        For each ligand and enzyme pair, this method:
+        - Creates a Vina configuration file centered at the specified coordinates.
+        - Runs docking using 'vina.exe'.
+        - Extracts the binding affinity from the resulting .pdbqt file.
+        - Stores the results in a DataFrame with enzymes as rows and ligands as columns.
+    
+        Parameters
+        ----------
+        center : tuple of float
+            The (x, y, z) coordinates of the center of the docking box.
+        boxsize : int, optional
+            The size of the docking box in Ångström along each axis (default is 20).
+    
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing binding affinities (in kcal/mol) for each ligand-enzyme pair.
+        """
+        
         cx = center[0]
         cy = center[1]
         cz = center[2]
@@ -451,7 +517,7 @@ class KEX():
                 new_filename = f"docked_{ligand[:-6]}_in_{enzyme[:-6]}.pdbqt"
                 r = subprocess.run(f'"vina.exe" --config config.txt --log log.txt --out {self.docking_results_dir}/{new_filename} --exhaustiveness 20 --num_modes 20 --energy_range 6', capture_output=True, text = True)
                 
-                #Lös detta bättre?
+                
                 os.remove("config.txt")
                 os.remove("log.txt")
                 
@@ -469,7 +535,6 @@ class KEX():
             df = pd.DataFrame(d)
         return df
     
-    def os_docking(self):
-        pass
+
         
     
