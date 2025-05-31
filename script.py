@@ -251,9 +251,9 @@ class KEX():
         """
         Apply one or more point mutations to specified residue positions using PyMOL.
     
-        If subunits is set to 'All', mutations are applied to all chains. Otherwise, the user can
-        specify which chains to mutate. The resulting structure is saved as a PDB file with a
-        descriptive filename, and all PyMOL output is logged.
+        If subunits is set to 'All', mutations are applied to all chains. Otherwise,
+        specify a list of chains to mutate. The mutated structure is saved as a PDB file
+        with a descriptive filename, and PyMOL output is logged.
     
         Parameters
         ----------
@@ -266,22 +266,20 @@ class KEX():
         label : str, optional
             Optional label to include in the output filename.
         """
-        
     
         def apply_mutation():
             pm.cmd.get_wizard().set_mode(mutation)
             pm.cmd.get_wizard().do_select(f"/MutProt//{chain}/{pos}/")
-            pm.cmd.get_wizard().apply()              
+            pm.cmd.get_wizard().apply()
     
-        # Kolla upp något snyggt sätt att hantera felaktiga inputs
-        if positions == None or mutations == None: 
-            return "Some error message"
+        if positions is None or mutations is None:
+            return "Error: positions and mutations must be provided."
     
-        if type(positions) == int:
+        if isinstance(positions, int):
             positions = [positions]
     
-        if subunits != 'All' and type(subunits) != list:
-            return "Some error message"
+        if subunits != 'All' and not isinstance(subunits, list):
+            return "Error: subunits must be 'All' or a list of chain IDs."
     
         original_stdout = sys.stdout
         log_file = open("mutations_log.txt", "w")
@@ -292,18 +290,14 @@ class KEX():
             pm.cmd.wizard("mutagenesis")
             pm.cmd.refresh_wizard()
     
-            if subunits == 'All':
-                chains = pm.cmd.get_chains("MutProt")
-            else:
-                chains = subunits 
-    
+            chains = pm.cmd.get_chains("MutProt") if subunits == 'All' else subunits
             if mutations == "All":
                 mutations = aa_list
     
-            new_filename = [] 
+            new_filename = []
     
             if len(positions) == len(mutations):
-                for i, pos in enumerate(positions):                                        
+                for i, pos in enumerate(positions):
                     mutation = mutations[i]
                     for chain in chains:
                         model = pm.cmd.get_model(f"/MutProt//{chain}/{pos}")
@@ -314,65 +308,73 @@ class KEX():
     
                 if label is not None:
                     new_filename.append(label)
+    
                 new_filename = f"{'_'.join(new_filename)}.pdb"
                 self.pdb_filenames.append(new_filename)
-    
                 output_path = os.path.join(self.pdb_dir, new_filename)
                 pm.cmd.save(output_path, "MutProt")
     
-        sys.stdout = original_stdout  
+        sys.stdout = original_stdout
         log_file.close()
+    
+        print(f"Mutated structure saved as: {new_filename}")
+
 
         
            
-    def molecular_dynamics(self):
+    def run_molecular_dynamics(self, temperature=300, simulation_steps=10000):
         """
-        Run energy minimization and short NVT molecular dynamics simulations for each PDB structure.
+        Run energy minimization and NVT molecular dynamics on all loaded PDB structures.
     
-        For each structure in self.pdb_filenames, this method sets up an OpenMM simulation using
-        the Amber14 force field, performs energy minimization, runs 10,000 steps of NVT dynamics,
-        and saves the final structure as a new PDB file with '_md' appended to the name.
+        Parameters
+        ----------
+        temperature : float
+            Simulation temperature in Kelvin.
+        simulation_steps : int
+            Number of MD steps to run after energy minimization.
     
         Side Effects
         ------------
-        - Modifies each entry in self.pdb_filenames to point to the MD-relaxed structure.
+        - Overwrites each file in `self.pdb_filenames` with a minimized and simulated version.
+        - Updates `self.pdb_filenames` with new filenames ending in '_md.pdb'.
         """
         for i, filename in enumerate(self.pdb_filenames):
-            filename = filename[:-4]
-            pdb = PDBFile(f"{self.pdb_dir}/{filename}.pdb")
-            # Specify the forcefield
+            base_name = filename[:-4]
+            print(f"Processing {base_name}.pdb...")
+    
+            pdb = PDBFile(f"{self.pdb_dir}/{base_name}.pdb")
             forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+    
             modeller = Modeller(pdb.topology, pdb.positions)
             modeller.deleteWater()
-            residues=modeller.addHydrogens(forcefield)
-
-            # System setup
+            modeller.addHydrogens(forcefield)
+    
             system = forcefield.createSystem(modeller.topology, nonbondedMethod=NoCutoff, constraints=HBonds)
-            integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
+            integrator = LangevinMiddleIntegrator(temperature * kelvin, 1 / picosecond, 0.004 * picoseconds)
+    
             simulation = Simulation(modeller.topology, system, integrator)
             simulation.context.setPositions(modeller.positions)
-
-            
+    
+            print("Minimizing energy...")
             simulation.minimizeEnergy()
-
-            # Setup simulation
-            
-            #simulation.reporters.append(StateDataReporter(stdout, 100, step=True, potentialEnergy=True, temperature=True, volume=True))
-            #simulation.reporters.append(StateDataReporter("md_log.txt", 100, step=True, potentialEnergy=True, temperature=True, volume=True))
-
-            # Start simulation
-            print(f"Running MD simulation on {filename}")
-            simulation.step(10000)
-            
-            
+    
+            print(f"Running {simulation_steps} MD steps at {temperature} K...")
+            simulation.step(simulation_steps)
+    
+            print("Minimizing energy after MD...")
             simulation.minimizeEnergy()
-            
+    
             positions = simulation.context.getState(getPositions=True).getPositions()
-            PDBFile.writeFile(simulation.topology, positions, open(f'{self.pdb_dir}/{filename}_md.pdb', 'w'))
-            self.pdb_filenames[i] = f'{filename}_md.pdb'
-            print(f"File saved as {filename}_md.pdb")
+            output_file = f"{base_name}_md.pdb"
+            full_path = os.path.join(self.pdb_dir, output_file)
+            PDBFile.writeFile(simulation.topology, positions, open(full_path, 'w'))
+    
+            self.pdb_filenames[i] = output_file
+            print(f"File saved as: {output_file}")
+            print()
+
                 
-    def create_pdbqt(self):
+    def pdb2pdbqt(self):
         """
         Convert PDB structures to PDBQT format using pdb2pqr30 and MDAnalysis.
     
@@ -384,7 +386,8 @@ class KEX():
     
         Note
         ----
-        Removes the first two lines of the .pdbqt to ensure compatibility with AutoDock Vina.
+        - Removes the first two lines of the .pdbqt to ensure compatibility with AutoDock Vina.
+        - Best compatability with protein structures.
         """
        
         for filename in self.pdb_filenames:
@@ -404,13 +407,16 @@ class KEX():
             os.remove(f"{self.pdbqt_dir}/{filename}_temp.pdbqt")
             os.remove(f"{self.pdbqt_dir}/{filename}.log")
             os.remove(f"{self.pdbqt_dir}/{filename}.pqr")
-            self.pdbqt_filenames.append(f"{filename}.pdbqt")
+            
+            final_filename = f"{filename}.pdbqt"
+            self.pdbqt_filenames.append(final_filename)
+            print(f"File saved as: {final_filename}")
 
     
     
 
 
-    def mol_to_pdbqt_new(self, filename, add_ligand = False):
+    def mol2pdbqt(self, filename, add_ligand = False):
         """
         Convert a .mol file to .pdbqt format using Open Babel and optionally move it to the ligand directory.
     
@@ -425,6 +431,10 @@ class KEX():
         ------------
         - Creates a .pdbqt file from the input .mol file using Gasteiger charges.
         - Optionally updates ligand_filenames and moves the file to the ligand directory.
+
+        Note
+        ----
+        - Best compatability with small moleules
         """
         
         filename = filename[:-4]
@@ -435,13 +445,14 @@ class KEX():
         obConversion.ReadFile(mol, f"{filename}.mol")
         mol.AddHydrogens()
 
-        # Lägg till laddningar
+        # Add charges
         charge_model = openbabel.OBChargeModel.FindType("gasteiger")
         charge_model.ComputeCharges(mol)
         obConversion.AddOption("h")
         obConversion.WriteFile(mol, f'{filename}.pdbqt')
         obConversion.CloseOutFile()
-
+        print(f"Molecule saved as {filename}.pdbqt")
+        
         if add_ligand:
             self.ligand_filenames.append(f"{filename}.pdbqt")
             source = os.path.join(os.getcwd(), f"{filename}.pdbqt")
@@ -456,7 +467,7 @@ class KEX():
         # os.remove(filename)
         self.ligand_filenames.append(filename)
     
-    def windows_docking(self, center, boxsize = 20): 
+    def vina_windows_docking(self, center, boxsize = 20): 
         """
         Perform molecular docking on Windows using AutoDock Vina for all enzyme-ligand combinations.
     
@@ -477,14 +488,14 @@ class KEX():
         -------
         pd.DataFrame
             A DataFrame containing binding affinities (in kcal/mol) for each ligand-enzyme pair.
+
+        Note
+        ----
+        - Does not take protein charges into consideration.
         """
         
-        cx = center[0]
-        cy = center[1]
-        cz = center[2]
-        bx = boxsize
-        by = boxsize
-        bz = boxsize
+        cx, cy, cz = center
+        bx = by = bz = boxsize
         
         d = {}
         
