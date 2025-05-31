@@ -1,0 +1,19 @@
+name: KEX
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12.7
+  - pymol-open-source=3.0.0
+  - nglview
+  - py3Dmol
+  - mdanalysis
+  - pandas
+  - openbabel
+  - openmm
+  - rdkit
+  - pdb2pqr
+  - smina
+  - pip
+  - pip:
+      - ipython  # För inline RDKit visning i notebooks
