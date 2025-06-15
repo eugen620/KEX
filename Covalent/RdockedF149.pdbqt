@@ -1,0 +1,140 @@
+MODEL 1
+REMARK minimizedAffinity -1132.71655
+REMARK minimizedRMSD -1
+REMARK  Name = Rprod_cov
+REMARK  5 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK    1  A    between atoms: C_6  and  C_7
+REMARK    2  A    between atoms: C_7  and  C_8
+REMARK    3  A    between atoms: C_7  and  O_14
+REMARK    4  A    between atoms: O_14  and  S_24
+REMARK    5  A    between atoms: C_16  and  S_24
+REMARK                            x       y       z     vdW  Elec       q    Type
+REMARK                         _______ _______ _______ _____ _____    ______ ____
+ROOT
+ATOM      1  C   UNK A   1      19.369  58.705  31.351  0.00  0.00    +0.044 C 
+ATOM      2  C   UNK A   1      19.866  58.453  29.928  0.00  0.00    +0.163 C 
+ENDROOT
+BRANCH   2   3
+ATOM      3  C   UNK A   1      19.722  56.994  29.542  0.00  0.00    -0.018 C 
+ATOM      4  C   UNK A   1      20.789  56.321  28.930  0.00  0.00    +0.006 C 
+ATOM      5  C   UNK A   1      20.669  54.978  28.569  0.00  0.00    +0.000 C 
+ATOM      6  C   UNK A   1      19.482  54.291  28.818  0.00  0.00    +0.000 C 
+ATOM      7  C   UNK A   1      18.417  54.945  29.431  0.00  0.00    +0.000 C 
+ATOM      8  C   UNK A   1      18.534  56.288  29.792  0.00  0.00    +0.006 C 
+ENDBRANCH   2   3
+BRANCH   2   9
+ATOM      9  O   UNK A   1      21.253  58.828  29.880  0.00  0.00    -0.282 OA
+BRANCH   9  12
+ATOM     10  O   UNK A   1      22.251  60.778  29.196  0.00  0.00    -0.228 OA
+ATOM     11  C   UNK A   1      20.434  60.964  30.745  0.00  0.00    +0.154 C 
+ATOM     12  S   UNK A   1      21.472  60.281  29.831  0.00  0.00    +0.154 S 
+ENDBRANCH   9  12
+ENDBRANCH   2   9
+TORSDOF 3
+ENDMDL
+MODEL 2
+REMARK minimizedAffinity -1132.60645
+REMARK minimizedRMSD -1
+REMARK  Name = Rprod_cov
+REMARK  5 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK    1  A    between atoms: C_6  and  C_7
+REMARK    2  A    between atoms: C_7  and  C_8
+REMARK    3  A    between atoms: C_7  and  O_14
+REMARK    4  A    between atoms: O_14  and  S_24
+REMARK    5  A    between atoms: C_16  and  S_24
+REMARK                            x       y       z     vdW  Elec       q    Type
+REMARK                         _______ _______ _______ _____ _____    ______ ____
+ROOT
+ATOM      1  C   UNK A   1      19.189  58.464  30.717  0.00  0.00    +0.044 C 
+ATOM      2  C   UNK A   1      20.230  58.195  29.632  0.00  0.00    +0.163 C 
+ENDROOT
+BRANCH   2   3
+ATOM      3  C   UNK A   1      20.463  56.708  29.445  0.00  0.00    -0.018 C 
+ATOM      4  C   UNK A   1      19.475  55.790  29.830  0.00  0.00    +0.006 C 
+ATOM      5  C   UNK A   1      19.676  54.418  29.663  0.00  0.00    +0.000 C 
+ATOM      6  C   UNK A   1      20.866  53.949  29.109  0.00  0.00    +0.000 C 
+ATOM      7  C   UNK A   1      21.853  54.850  28.718  0.00  0.00    +0.000 C 
+ATOM      8  C   UNK A   1      21.654  56.221  28.884  0.00  0.00    +0.006 C 
+ENDBRANCH   2   3
+BRANCH   2   9
+ATOM      9  O   UNK A   1      21.455  58.826  30.040  0.00  0.00    -0.282 OA
+BRANCH   9  12
+ATOM     10  O   UNK A   1      21.675  60.772  28.845  0.00  0.00    -0.228 OA
+ATOM     11  C   UNK A   1      21.117  60.970  31.165  0.00  0.00    +0.154 C 
+ATOM     12  S   UNK A   1      21.470  60.281  29.831  0.00  0.00    +0.154 S 
+ENDBRANCH   9  12
+ENDBRANCH   2   9
+TORSDOF 3
+ENDMDL
+MODEL 3
+REMARK minimizedAffinity -1131.6156
+REMARK minimizedRMSD -1
+REMARK  Name = Rprod_cov
+REMARK  5 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK    1  A    between atoms: C_6  and  C_7
+REMARK    2  A    between atoms: C_7  and  C_8
+REMARK    3  A    between atoms: C_7  and  O_14
+REMARK    4  A    between atoms: O_14  and  S_24
+REMARK    5  A    between atoms: C_16  and  S_24
+REMARK                            x       y       z     vdW  Elec       q    Type
+REMARK                         _______ _______ _______ _____ _____    ______ ____
+ROOT
+ATOM      1  C   UNK A   1      19.188  59.176  31.426  0.00  0.00    +0.044 C 
+ATOM      2  C   UNK A   1      19.670  58.660  30.071  0.00  0.00    +0.163 C 
+ENDROOT
+BRANCH   2   3
+ATOM      3  C   UNK A   1      19.369  57.183  29.903  0.00  0.00    -0.018 C 
+ATOM      4  C   UNK A   1      18.463  56.550  30.766  0.00  0.00    +0.006 C 
+ATOM      5  C   UNK A   1      18.178  55.190  30.622  0.00  0.00    +0.000 C 
+ATOM      6  C   UNK A   1      18.792  54.450  29.615  0.00  0.00    +0.000 C 
+ATOM      7  C   UNK A   1      19.690  55.067  28.748  0.00  0.00    +0.000 C 
+ATOM      8  C   UNK A   1      19.977  56.426  28.889  0.00  0.00    +0.006 C 
+ENDBRANCH   2   3
+BRANCH   2   9
+ATOM      9  O   UNK A   1      21.089  58.872  30.006  0.00  0.00    -0.282 OA
+BRANCH   9  12
+ATOM     10  O   UNK A   1      21.368  60.845  28.867  0.00  0.00    -0.228 OA
+ATOM     11  C   UNK A   1      21.971  60.825  31.184  0.00  0.00    +0.154 C 
+ATOM     12  S   UNK A   1      21.470  60.282  29.831  0.00  0.00    +0.154 S 
+ENDBRANCH   9  12
+ENDBRANCH   2   9
+TORSDOF 3
+ENDMDL
+MODEL 4
+REMARK minimizedAffinity -1129.80481
+REMARK minimizedRMSD -1
+REMARK  Name = Rprod_cov
+REMARK  5 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK    1  A    between atoms: C_6  and  C_7
+REMARK    2  A    between atoms: C_7  and  C_8
+REMARK    3  A    between atoms: C_7  and  O_14
+REMARK    4  A    between atoms: O_14  and  S_24
+REMARK    5  A    between atoms: C_16  and  S_24
+REMARK                            x       y       z     vdW  Elec       q    Type
+REMARK                         _______ _______ _______ _____ _____    ______ ____
+ROOT
+ATOM      1  C   UNK A   1      21.559  57.826  28.697  0.00  0.00    +0.044 C 
+ATOM      2  C   UNK A   1      20.754  58.051  29.976  0.00  0.00    +0.163 C 
+ENDROOT
+BRANCH   2   3
+ATOM      3  C   UNK A   1      19.543  57.140  30.036  0.00  0.00    -0.018 C 
+ATOM      4  C   UNK A   1      19.446  56.046  29.165  0.00  0.00    +0.006 C 
+ATOM      5  C   UNK A   1      18.336  55.199  29.209  0.00  0.00    +0.000 C 
+ATOM      6  C   UNK A   1      17.313  55.436  30.125  0.00  0.00    +0.000 C 
+ATOM      7  C   UNK A   1      17.400  56.516  30.999  0.00  0.00    +0.000 C 
+ATOM      8  C   UNK A   1      18.508  57.364  30.957  0.00  0.00    +0.006 C 
+ENDBRANCH   2   3
+BRANCH   2   9
+ATOM      9  O   UNK A   1      20.325  59.423  29.982  0.00  0.00    -0.282 OA
+BRANCH   9  12
+ATOM     10  O   UNK A   1      21.695  60.916  28.905  0.00  0.00    -0.228 OA
+ATOM     11  C   UNK A   1      22.082  60.565  31.242  0.00  0.00    +0.154 C 
+ATOM     12  S   UNK A   1      21.427  60.389  29.857  0.00  0.00    +0.154 S 
+ENDBRANCH   9  12
+ENDBRANCH   2   9
+TORSDOF 3
+ENDMDL
