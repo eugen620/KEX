@@ -1,5 +1,4 @@
-# KEX
-Protein Engineering in Python
+# Protein Engineering in Python
 
 This project contains a Python class named `KEX`, implemented in the `script.py` file. The class provides core functionality for our protein engineering workflow, including docking, molecular dynamics, and analysis tools.
 
